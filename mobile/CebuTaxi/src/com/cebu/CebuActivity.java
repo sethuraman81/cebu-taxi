@@ -52,6 +52,8 @@ import org.osmdroid.views.overlay.TilesOverlay;
 import com.cebu.R;
 import com.cebu.LocationService.LocalBinder;
 import android.app.Activity;
+import android.app.ActivityManager;
+import android.app.ActivityManager.RunningServiceInfo;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.app.ProgressDialog;
@@ -174,7 +176,7 @@ public class CebuActivity extends Activity {
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-		
+		LogUtil.appendLog(TAG+"Activity Invoked");
 		context = this;
 		
 		registerReceiver(mHandleMessageReceiver,
@@ -189,7 +191,7 @@ public class CebuActivity extends Activity {
 		if (regId.equals("")) {
 		  GCMRegistrar.register(this, "380262927280");
 		} else {
-		    Log.v(TAG, "Already registered");
+		    LogUtil.appendLog(TAG+"Already registered");
 		  	String postUrl = CebuActivity.apiRequestUrl + "/api/registerGcm";
 			HttpClient client = Utils.getNewHttpClient();
 			HttpPost request = new HttpPost(postUrl);
@@ -206,7 +208,7 @@ public class CebuActivity extends Activity {
 			}
 			catch(Exception e)
 			{
-				Log.i("failed to register gcm key", e.toString());
+				LogUtil.appendLog(TAG+"failed to register gcm key"+e.toString());
 			}
 		}
 
@@ -217,7 +219,8 @@ public class CebuActivity extends Activity {
 		dialog = ProgressDialog.show(this, "", "Registering with server.", true);
 	
 	}
-
+	
+	
 
 	private class LoginTask extends AsyncTask<Void, Void, String> {
 
@@ -259,20 +262,20 @@ public class CebuActivity extends Activity {
 				driverName=obj.getString("driverName");
 				return "PARSE_COMPLETE";
 			} catch (ClientProtocolException e) {
-				Log.e(TAG, "exception logging in", e);
+				LogUtil.appendLog(TAG+"exception logging in" + e.getMessage() );
 				toast("Error logging in.  Try again.");
 			} catch (IOException e) {
-				Log.e(TAG, "exception logging in", e);
+				LogUtil.appendLog(TAG+"exception logging in" + e.getMessage() );
 				toast("Error logging in.  Try again.");
 			} catch (JSONException e) {
 				if(e.getMessage().contains("driverName"))
 				{
 					return "PARSE_COMPLETE";
 				}
-				Log.e(TAG, "exception logging in", e);
+				LogUtil.appendLog(TAG+"exception logging in" + e.getMessage() );
 				toast("Error logging in.  Check your password and try again.");
 			} catch (Exception e) {
-				Log.e(TAG, "exception logging in", e);
+				LogUtil.appendLog(TAG+"exception logging in" + e.getMessage() );
 				toast("Error logging in.");
 			}
 
@@ -312,6 +315,7 @@ public class CebuActivity extends Activity {
 				if(!LocationService.isRunning())
 				{
 					Intent intent = new Intent(CebuActivity.this, LocationService.class);
+					LogUtil.appendLog("calling to start service");
 					locationService.realStart(intent);
 				}
 			}
@@ -1076,6 +1080,7 @@ public class CebuActivity extends Activity {
 		return rounded.doubleValue();
 	}
 
+
 	private void initMyLocation() {
 
 		if(this.myMap != null)
@@ -1096,7 +1101,7 @@ public class CebuActivity extends Activity {
 		copyAssets();
 		
 		this.mOverlayProvider = new MapTileProviderBasic(getApplicationContext());
-       
+		DefaultResourceProxyImpl mResourceProxy;
 			
 		//this.mCustomTileSource = new XYTileSource("Openplans", null, 0, 20, 256, ".png",
         //        mapboxTilesUrl);
@@ -1112,38 +1117,29 @@ public class CebuActivity extends Activity {
         //myMap.getOverlays().add(this.mTilesOverlay);
      
     	//mHandler.postDelayed(messageRetrieveTask, mapOverlayUpdatePeriod);
-		
-
-		this.mCustomTileSource  = new XYTileSource("mbtiles", ResourceProxy.string.offline_mode, 10, 16, 256, ".png", "http://example.org/");
-		
-		DefaultResourceProxyImpl mResourceProxy = new DefaultResourceProxyImpl(getApplicationContext());
-    	SimpleRegisterReceiver simpleReceiver = new SimpleRegisterReceiver(this);
-    
-    	
     	File f = new File(context.getExternalFilesDir(null), "/CebuBright16.mbtiles");
-    	
-    	mbtilesDb = MBTilesFileArchive.getDatabaseFileArchive(f);
-    	
-    	IArchiveFile[] files = { mbtilesDb };    	
-    	
-    	MapTileModuleProviderBase moduleProvider = new MapTileFileArchiveProvider(simpleReceiver, this.mCustomTileSource, files);
-    	    	    	
-    	
-		mProvider = new MapTileProviderArray(this.mCustomTileSource, null, new MapTileModuleProviderBase[]{ moduleProvider });
-		
-		this.myMap = new MapView(this, 256, mResourceProxy, mProvider);
-		
-        myLocOverlay = new MyLocationOverlay(this, myMap);
-        myLocOverlay.enableMyLocation();
-        
-        myLocOverlay.enableFollowLocation();
-        
-		myMap.getOverlays().add(myLocOverlay);
-		
+    	if (f.exists())
+    	{
+    		this.mCustomTileSource  = new XYTileSource("mbtiles", ResourceProxy.string.offline_mode, 10, 16, 256, ".png", "http://example.org/");		
+    		mResourceProxy = new DefaultResourceProxyImpl(getApplicationContext());
+        	SimpleRegisterReceiver simpleReceiver = new SimpleRegisterReceiver(this);    		
+        	mbtilesDb = MBTilesFileArchive.getDatabaseFileArchive(f);        	
+        	IArchiveFile[] files = { mbtilesDb };
+        	MapTileModuleProviderBase moduleProvider = new MapTileFileArchiveProvider(simpleReceiver, this.mCustomTileSource, files);
+    		mProvider = new MapTileProviderArray(this.mCustomTileSource, null, new MapTileModuleProviderBase[]{ moduleProvider });
+    		this.myMap = new MapView(this, 256, mResourceProxy, mProvider);    		
+            myLocOverlay = new MyLocationOverlay(this, myMap);
+            myLocOverlay.enableMyLocation();            
+            myLocOverlay.enableFollowLocation();            
+    		myMap.getOverlays().add(myLocOverlay);        	
+    	}
+    	    	    	    	    	    					
 		runOnUiThread(new Runnable() {
 	         public void run() {
+	        	 GeoPoint gp =myLocOverlay.getMyLocation();
 	        	 //myMap.getController().animateTo(myLocOverlay.getMyLocation());
-	        	 myMap.getController().setCenter(myLocOverlay.getMyLocation());
+	        	 if(gp!=null){
+	        	 myMap.getController().setCenter(myLocOverlay.getMyLocation());}
 	            } 
 	        });
 	
@@ -1168,7 +1164,6 @@ public class CebuActivity extends Activity {
 			e.printStackTrace();
 		}
 	}
-	
 	private void copyAssets() {
 	    AssetManager assetManager = getAssets();
 	    String[] files = null;
@@ -1180,7 +1175,7 @@ public class CebuActivity extends Activity {
 	    try {
 	        files = assetManager.list("");
 	    } catch (IOException e) {
-	        Log.e("tag", e.getMessage());
+	        LogUtil.appendLog(TAG + e.getMessage() );
 	    }
 	    for(String filename : files) {
 	        InputStream in = null;
@@ -1199,7 +1194,7 @@ public class CebuActivity extends Activity {
 		          out = null;
 	          }
 	        } catch(Exception e) {
-	            Log.e("tag", e.getMessage());
+	            LogUtil.appendLog(TAG + e.getMessage() );
 	        }       
 	    }
 	}
@@ -1213,7 +1208,7 @@ public class CebuActivity extends Activity {
 	
 	public void setMap() 
 	{
-		//MapView map = (MapView) findViewById(R.id.mapview);
+		MapView map = (MapView) findViewById(R.id.mapview);
 		//map.setTileSource(TileSourceFactory.MAPNIK);// MAPNIK
 		
 		LocationManager mlocManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
