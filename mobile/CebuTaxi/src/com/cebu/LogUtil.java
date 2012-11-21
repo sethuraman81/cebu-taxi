@@ -10,7 +10,7 @@ import java.util.Date;
 public class LogUtil {
 	public static void appendLog(String text)
     {
-	       File logFile = new File("sdcard/CTTest"+Utils.date()+".file");
+	       File logFile = new File("sdcard/CTTest"+Utils.date()+".txt");
 	       if (!logFile.exists())
 	       {
 	          try
@@ -25,10 +25,10 @@ public class LogUtil {
 	       try
 	       {
 	          //BufferedWriter for performance, true to set append to file flag
-	          BufferedWriter buf = new BufferedWriter(new FileWriter(logFile, true)); 
-	          buf.append(Utils.time()+" "+text);
-	          buf.newLine();
-	          buf.close();
+	          BufferedWriter buf = new BufferedWriter(new FileWriter(logFile, true)); 	          
+	            buf.append(Utils.time()+" "+text);
+	            buf.newLine();
+	            buf.close();
 	       }
 	       catch (Exception e)
 	       {	          
